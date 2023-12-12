@@ -1,6 +1,10 @@
-name: minikube-test
+name: run-demo
 on:
-  - workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      use-sqlite:
+        type: boolean
+        description: USE_SQLITE
 jobs:
   job1:
     runs-on: ubuntu-latest
@@ -24,7 +28,7 @@ jobs:
     - name: Deploy to minikube
       run: |
         cd ${GITHUB_WORKSPACE}/.helm
-        helm upgrade --install --debug ${{env.APP_NAME}} ./chart --set image.repository=${{env.REPO_NAME}}/${{env.APP_NAME}} --set image.tag=${{env.TAG}} --set image.pullPolicy=Never --set service.type=NodePort
+        helm upgrade --install --debug ${{env.APP_NAME}} ./chart --set image.repository=${{env.REPO_NAME}}/${{env.APP_NAME}} --set image.tag=${{env.TAG}} --set image.pullPolicy=Never --set service.type=NodePort --set-string env.sqliteEnabled=${{inputs.use-sqlite}}
     - name: Wait untill pods are going to be ready
       run: |
         kubectl rollout status deployment/${{env.APP_NAME}} --timeout=5m
