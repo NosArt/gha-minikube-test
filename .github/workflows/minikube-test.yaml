@@ -5,25 +5,32 @@ jobs:
   job1:
     runs-on: ubuntu-latest
     name: build and deploy to minikube
+    env:
+      REPO_NAME: minkube-local
+      APP_NAME: nginx-test
+      TAG: '0.0.1'
     steps:
     - uses: actions/checkout@v2
     - name: Start minikube
       uses: medyagh/setup-minikube@master
-    - name: Try the cluster !
-      run: kubectl get pods -A
     - name: Build image
       run: |
+        cd ${GITHUB_WORKSPACE}
         export SHELL=/bin/bash
         eval $(minikube -p minikube docker-env) 
-        docker build -f ./Dockerfile -t minkube/nginx-test:0.0.1 .
+        docker build -f ./Dockerfile -t ${{env.REPO_NAME}}/${{env.APP_NAME}}:${{env.TAG}} .
         echo -n "verifying images:"
         docker images        
     - name: Deploy to minikube
-      run:
-        helm version
-    # - name: Test service URLs
-    #   run: |
-    #     minikube service list
-    #     minikube service example --url
-    #     echo "------------------opening the service------------------"
-    #     curl $(minikube service example --url)  
+      run: |
+        cd ${GITHUB_WORKSPACE}/.helm
+        helm upgrade --install -f custom-values.yaml ${{env.APP_NAME}} ./chart
+    - name: Wait untill pods are going to be ready
+      run: |
+        kubectl rollout status deployment/${{env.APP_NAME}} --timeout=5m
+    - name: Test service URLs
+      run: |
+        minikube service list
+        minikube service example --url
+        echo "------------------opening the service------------------"
+        curl $(minikube service example --url)  
